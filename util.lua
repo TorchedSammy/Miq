@@ -1,0 +1,30 @@
+local M = {}
+
+function M.exec(cmd, opts)
+	local proc = process.start(cmd, opts or {})
+	if proc then
+		while proc:running() do
+			coroutine.yield(0.1)
+		end
+		return nil, proc:returncode()
+	end
+
+	return nil
+end
+
+function M.isURL(url)
+	return url:match '%w+://'
+end
+
+function M.slugify(url)
+	return url:match '%w+/%w+$'
+end
+
+--- Returns a proper plugin name based on a provided URL
+--- It will remove the `.lxl` suffix or the `lite-xl-` prefix
+function M.plugName(url)
+	local name = string.lower(url:match '[^/]+$')
+	return name:gsub('.lxl$', ''):gsub('^lite-xl-', '')
+end
+
+return M
