@@ -14,7 +14,7 @@ function M.installPlugin(nameOrUrl)
 
 	local promise = Promise.new()
 	core.add_thread(function()
-		local plugin = util.pluginName(slug)
+		local plugin = util.plugName(slug)
 		local _, _ = util.exec {'git', 'clone', url, USERDIR .. '/plugins/' .. plugin}
 		promise:resolve()
 	end)
