@@ -3,8 +3,11 @@ local core = require 'core'
 local common = require 'core.common'
 local command = require 'core.command'
 local config = require 'core.config'
+local db = require 'plugins.miq.db'
 local managers = require 'plugins.miq.managers'
 local util = require 'plugins.miq.util'
+
+db.init()
 
 config.plugins.miq = common.merge({
 	lpm_prefix = '',
@@ -14,41 +17,88 @@ config.plugins.miq = common.merge({
 
 local M = {}
 
-function M.install()
+local function pluginIterate(fun)
 	for _, _p in ipairs(config.plugins.miq.plugins) do
-		local p = type(_p) == 'string' and {_p} or _p
-		local nameOrUrl = p[1]
+		local p = type(_p) == 'string' and {name = _p} or _p
+		p.name = p[1] or p.name
+		fun(p)
+	end
+end
 
+local function pluginExists(name)
+	return util.fileExists(USERDIR .. '/plugins/' .. name) or util.fileExists(USERDIR .. '/plugins/' .. name .. '.lua')
+end
+
+function M.installSingle(spec)
+	spec.installMethod = spec.installMethod or 'lpm'
+	local mg = managers[spec.installMethod]
+	local name = util.plugName(spec.name)
+
+	local function done()
+		core.log(string.format('[Miq] Installed %s!', name))
+		db.addPlugin(spec)
+	end
+	local fail
+	fail = function(log)
+		if not config.plugins.miq.fallback then
+			print(log)
+			core.log(string.format('[Miq] Could not install %s.', name))
+			return
+		end
+		if config.plugins.miq.fallback and spec.installMethod ~= 'miq' then
+			spec.installMethod = 'miq'
+			managers.miq.installPlugin(spec.name):done(done):fail(fail)
+			return
+		end
+	end
+	mg.installPlugin(spec.name):done(done):fail(fail)
+end
+
+function M.install()
+	pluginIterate(function(p)
 		-- TODO: check if name or url can be slugified early,
 		-- and block if it cant
 		-- unless the user has specified a repo url
 		-- (this is in the case of single files NOT managed by lpm, like bigclock)
-		local name = util.plugName(nameOrUrl)
-		local mg = managers[p.installMethod or 'lpm']
+		local name = util.plugName(p.name)
 
-		if util.fileExists(USERDIR .. '/plugins/' .. name) or util.fileExists(USERDIR .. '/plugins/' .. name .. '.lua') then
+		if pluginExists(name) then
 			--core.log(string.format('[Miq] %s is already installed.', name))
-			goto continue
+			--return
 		end
-		mg.installPlugin(nameOrUrl):done(function()
-			core.log(string.format('[Miq] Installed %s!', name))
-		end):fail(function(log)
-			if not config.plugins.miq.fallback then
-				print(log)
-				core.log(string.format('[Miq] Could not install %s.', name))
+		M.installSingle(p)
+	end)
+end
+
+function M.update()
+	pluginIterate(function(p)
+		local realName = util.plugName(p.name)
+
+		if not pluginExists(realName) then
+			M.installSingle(p)
+			return
+		end
+		local installMethod = db.getPlugin(p.name).installMethod
+		local mg = managers[installMethod]
+
+		mg.updatePlugin(realName):done(function(already)
+			if already then
+				core.log(string.format('[Miq] %s has already been updated.', realName))
 				return
 			end
-			if config.plugins.miq.fallback and p.installMethod ~= 'miq' then
-				managers.miq.installPlugin(nameOrUrl)
-			end
+			core.log(string.format('[Miq] Updated %s!', realName))
+		end):fail(function()
+			core.log(string.format('[Miq] Could not update %s.', realName))
 		end)
-		::continue::
-	end
+	end)
 end
 
 command.add(nil, {
 	['miq:install'] = function()
 		M.install()
+	end,
+	['miq:update'] = function()
+		M.update()
 	end
 })
 return M

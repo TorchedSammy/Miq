@@ -20,4 +20,24 @@ function M.installPlugin(nameOrUrl)
 	end)
 	return promise
 end
+
+function M.updatePlugin(name)
+	local promise = Promise.new()
+	core.add_thread(function()
+		local pdir = USERDIR .. '/plugins/' .. name
+		local log, code = util.gitCmd({'pull'}, pdir)
+		if code ~= 0 then
+			promise:reject()
+			return
+		end
+
+		if log:match 'Already up to date' then
+			promise:resolve(true)
+		else
+			promise:resolve()
+		end
+	end)
+	return promise
+end
+
 return M

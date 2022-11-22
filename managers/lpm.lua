@@ -78,4 +78,19 @@ function M.installPlugin(urlOrName)
 	return run {'plugin', 'install', plugin}
 end
 
+function M.updatePlugin(name)
+	-- lpm's update method is the install command, so just use the install function
+	local promise = Promise.new()
+	M.installPlugin(name):done(function(log)
+		if log:match 'already installed' then
+			promise:resolve(true)
+		else
+			promise:resolve(false)
+		end
+	end):fail(function()
+		promise:reject()
+	end)
+	return promise
+end
+
 return M

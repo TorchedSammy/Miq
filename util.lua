@@ -2,11 +2,13 @@ local M = {}
 
 function M.exec(cmd, opts)
 	local proc = process.start(cmd, opts or {})
+	local log = ''
 	if proc then
 		while proc:running() do
+			log = log .. proc:read_stdout()
 			coroutine.yield(0.1)
 		end
-		return nil, proc:returncode()
+		return log, proc:returncode()
 	end
 
 	return nil
@@ -30,6 +32,10 @@ end
 function M.fileExists(path)
 	local f <close> = io.open(path)
 	return f ~= nil
+end
+
+function M.gitCmd(args, dir)
+	return M.exec {'git', '-C', dir, table.unpack(args)}
 end
 
 return M
