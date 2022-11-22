@@ -27,4 +27,9 @@ function M.plugName(url)
 	return name:gsub('.lxl$', ''):gsub('^lite-xl-', '')
 end
 
+function M.fileExists(path)
+	local f <close> = io.open(path)
+	return f ~= nil
+end
+
 return M

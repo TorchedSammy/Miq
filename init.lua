@@ -24,8 +24,12 @@ function M.install()
 		-- unless the user has specified a repo url
 		-- (this is in the case of single files NOT managed by lpm, like bigclock)
 		local name = util.plugName(nameOrUrl)
-
 		local mg = managers[p.installMethod or 'lpm']
+
+		if util.fileExists(USERDIR .. '/plugins/' .. name) or util.fileExists(USERDIR .. '/plugins/' .. name .. '.lua') then
+			--core.log(string.format('[Miq] %s is already installed.', name))
+			goto continue
+		end
 		mg.installPlugin(nameOrUrl):done(function()
 			core.log(string.format('[Miq] Installed %s!', name))
 		end):fail(function(log)
@@ -38,6 +42,7 @@ function M.install()
 				managers.miq.installPlugin(nameOrUrl)
 			end
 		end)
+		::continue::
 	end
 end
 
