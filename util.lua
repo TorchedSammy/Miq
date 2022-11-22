@@ -2,13 +2,11 @@ local M = {}
 
 function M.exec(cmd, opts)
 	local proc = process.start(cmd, opts or {})
-	local log = ''
 	if proc then
 		while proc:running() do
-			log = log .. proc:read_stdout()
 			coroutine.yield(0.1)
 		end
-		return log, proc:returncode()
+		return proc:read_stdout() or '', proc:returncode()
 	end
 
 	return nil

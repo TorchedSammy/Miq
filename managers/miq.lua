@@ -31,11 +31,7 @@ function M.updatePlugin(name)
 			return
 		end
 
-		if log:match 'Already up to date' then
-			promise:resolve(true)
-		else
-			promise:resolve()
-		end
+		promise:resolve(log:match 'Already up to date' and true or false)
 	end)
 	return promise
 end
