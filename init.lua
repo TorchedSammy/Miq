@@ -57,10 +57,9 @@ function M.installSingle(spec)
 		db.addPlugin(spec)
 	end
 	local fail
-	fail = function(log)
-		if not config.plugins.miq.fallback then
-			print(log)
-			core.log(string.format('[Miq] Could not install %s.', name))
+	fail = function(err)
+		if not config.plugins.miq.fallback or spec.installMethod == 'miq' then
+			core.error(string.format('[Miq] Could not install %s.\n%s', name, err))
 			return
 		end
 		if config.plugins.miq.fallback and spec.installMethod ~= 'miq' then
