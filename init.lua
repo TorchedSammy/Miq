@@ -6,6 +6,7 @@ local config = require 'core.config'
 local db = require 'plugins.miq.db'
 local managers = require 'plugins.miq.managers'
 local util = require 'plugins.miq.util'
+local Promise = require 'plugins.miq.promise'
 
 db.init()
 
@@ -30,8 +31,24 @@ local function pluginExists(name)
 	return util.fileExists(USERDIR .. '/plugins/' .. name) or util.fileExists(USERDIR .. '/plugins/' .. name .. '.lua')
 end
 
+local function isFilePath(path)
+	local prefixes = {
+		'~/',
+		'/',
+		'../',
+		'./'
+	}
+	for _, pref in ipairs(prefixes) do
+		if path:find(pref, 1, true) == 1 then
+			return true
+		end
+	end
+
+	return false
+end
+ 
 function M.installSingle(spec)
-	spec.installMethod = spec.installMethod or config.plugins.miq.installMethod
+	spec.installMethod = spec.installMethod or (isFilePath(spec.name) and 'local') or config.plugins.miq.installMethod
 	local mg = managers[spec.installMethod]
 	local name = util.plugName(spec.name)
 
