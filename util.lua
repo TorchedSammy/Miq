@@ -13,7 +13,7 @@ function M.exec(cmd, opts)
 end
 
 function M.isURL(url)
-	return url:match '%w+://'
+	return url:match '^%w+://'
 end
 
 function M.slugify(url)
