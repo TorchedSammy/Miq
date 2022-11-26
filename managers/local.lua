@@ -18,7 +18,7 @@ end
 function M.updatePlugin(_)
 	-- noop - local plugins should be updated separately
 	local promise = Promise.new()
-	promise:resolve()
+	promise:resolve(true)
 	return promise
 end
 
