@@ -17,7 +17,7 @@ function M.isURL(url)
 end
 
 function M.slugify(url)
-	return url:match '%w+/%w+$'
+	return url:match '[^/]/[^/]+$'
 end
 
 --- Returns a proper plugin name based on a provided URL
