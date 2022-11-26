@@ -24,7 +24,7 @@ end
 --- It will remove the `.lxl` suffix or the `lite-xl-` prefix
 function M.plugName(url)
 	local name = string.lower(url:match '[^/]+$')
-	return name:gsub('.lxl$', ''):gsub('^lite-xl-', '')
+	return name:gsub('.lxl$', ''):gsub('^lite%-xl%-', '')
 end
 
 function M.fileExists(path)
