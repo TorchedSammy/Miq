@@ -19,12 +19,12 @@ function M.write()
 end
 
 function M.addPlugin(spec)
-	data.plugins[spec.name] = spec
+	data.plugins[spec.plugin] = spec
 	M.write()
 end
 
-function M.getPlugin(name)
-	return data.plugins[name]
+function M.getPlugin(id)
+	return data.plugins[id]
 end
 
 return M
