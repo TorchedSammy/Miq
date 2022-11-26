@@ -11,7 +11,6 @@ local Promise = require 'plugins.miq.promise'
 db.init()
 
 config.plugins.miq = common.merge({
-	lpm_prefix = '',
 	installMethod = 'miq',
 	fallback = true,
 	debug = false,
@@ -88,15 +87,7 @@ function M.installSingle(spec)
 		postInstall(spec):done(done):fail(fail)
 	end
 	fail = function(err)
-		if not config.plugins.miq.fallback or spec.installMethod == 'miq' then
-			core.error(string.format('[Miq] Could not install %s.\n%s', name, err))
-			return
-		end
-		if config.plugins.miq.fallback and spec.installMethod ~= 'miq' then
-			spec.installMethod = 'miq'
-			managers.miq.installPlugin(spec.plugin):done(done):fail(fail)
-			return
-		end
+		core.error(string.format('[Miq] Could not install %s.\n%s', name, err))
 	end
 	mg.installPlugin(spec):done(done):fail(fail)
 end
