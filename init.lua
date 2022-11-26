@@ -153,7 +153,7 @@ function M.update()
 		local installMethod = dbPlug.installMethod
 		local mg = managers[installMethod]
 
-		mg.updatePlugin(spec):done(function(already)
+		mg.updatePlugin(p):done(function(already)
 			if already then
 				core.log(string.format('[Miq] %s has already been updated.', realName))
 				return
