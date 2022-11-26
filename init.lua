@@ -12,6 +12,7 @@ db.init()
 config.plugins.miq = common.merge({
 	lpm_prefix = '',
 	fallback = true,
+	installMethod = 'miq',
 	plugins = {}
 }, config.plugins.miq)
 
@@ -30,7 +31,7 @@ local function pluginExists(name)
 end
 
 function M.installSingle(spec)
-	spec.installMethod = spec.installMethod or 'lpm'
+	spec.installMethod = spec.installMethod or config.plugins.miq.installMethod
 	local mg = managers[spec.installMethod]
 	local name = util.plugName(spec.name)
 
