@@ -5,11 +5,11 @@ local Promise = require 'plugins.miq.promise'
 
 local M = {}
 
-function M.installPlugin(path)
+function M.installPlugin(spec)
 	local promise = Promise.new()
 	core.add_thread(function()
-		local plugin = util.plugName(common.basename(path))
-		local _, _ = util.exec {'ln', '-s', common.home_expand(path), USERDIR .. '/plugins/' .. plugin}
+		local plugin = util.plugName(common.basename(spec.plugin))
+		local _, _ = util.exec {'ln', '-s', common.home_expand(spec.plugin), USERDIR .. '/plugins/' .. plugin}
 		promise:resolve()
 	end)
 	return promise

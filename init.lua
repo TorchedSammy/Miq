@@ -28,6 +28,7 @@ local function pluginIterate(fun)
 	for _, _p in ipairs(config.plugins.miq.plugins) do
 		local p = type(_p) == 'string' and {plugin = _p} or _p
 		p.plugin = p[1] or p.plugin
+		p.name = p.name or util.plugName(p.plugin)
 		fun(p)
 	end
 end
@@ -71,7 +72,7 @@ local M = {}
 function M.installSingle(spec)
 	spec.installMethod = spec.installMethod or (isFilePath(spec.plugin) and 'local') or config.plugins.miq.installMethod
 	local mg = managers[spec.installMethod]
-	local name = util.plugName(spec.plugin)
+	local name = spec.name or util.plugName(spec.plugin)
 
 	log(string.format('[Miq] (Debug) Using %s install method for %s', spec.installMethod, name))
 
@@ -97,7 +98,7 @@ function M.installSingle(spec)
 			return
 		end
 	end
-	mg.installPlugin(spec.plugin):done(done):fail(fail)
+	mg.installPlugin(spec):done(done):fail(fail)
 end
 
 function M.reinstallSingle(spec)
@@ -107,7 +108,7 @@ end
 
 function M.remove(spec)
 	local slug = util.slugify(spec.plugin)
-	local name = util.plugName(spec.plugin)
+	local name = spec.name
 	-- a name that cannot be slugified is a singleton,
 	-- and we want to cover the edge case of someone having a singleton
 	-- and non singleton with the same name (its the correct thing to do anyway)
@@ -124,8 +125,8 @@ function M.install()
 		-- TODO: check if name or url can be slugified early,
 		-- and block if it cant
 		-- unless the user has specified a repo url
-		-- (this is in the case of single files NOT managed by lpm, like bigclock)
-		local name = util.plugName(p.plugin)
+		-- (this is in the case of single files like bigclock)
+		local name = p.name
 
 		if pluginExists(name) then
 			core.log(string.format('[Miq] %s is already installed.', name))
@@ -137,7 +138,7 @@ end
 
 function M.reinstall()
 	pluginIterate(function(p)
-		local name = util.plugName(p.plugin)
+		local name = p.name
 
 		if pluginExists(name) then
 			M.reinstallSingle(p)
@@ -147,7 +148,7 @@ end
 
 function M.update()
 	pluginIterate(function(p)
-		local realName = util.plugName(p.plugin)
+		local realName = p.name
 
 		if not pluginExists(realName) then
 			M.installSingle(p)
@@ -161,7 +162,7 @@ function M.update()
 		local installMethod = dbPlug.installMethod
 		local mg = managers[installMethod]
 
-		mg.updatePlugin(realName):done(function(already)
+		mg.updatePlugin(spec):done(function(already)
 			if already then
 				core.log(string.format('[Miq] %s has already been updated.', realName))
 				return
