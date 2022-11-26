@@ -127,8 +127,11 @@ command.add(nil, {
 	['miq:install'] = function()
 		M.install()
 	end,
+	['miq:reinstall'] = function()
+		M.reinstall()
+	end
 	['miq:update'] = function()
 		M.update()
-	end
+	end,
 })
 return M
