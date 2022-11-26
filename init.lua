@@ -12,12 +12,17 @@ db.init()
 
 config.plugins.miq = common.merge({
 	lpm_prefix = '',
-	fallback = true,
 	installMethod = 'miq',
+	fallback = true,
+	debug = false,
 	plugins = {}
 }, config.plugins.miq)
 
-local M = {}
+local function log(msg)
+	if config.plugins.miq.debug then
+		core.log_quiet(tostring(msg))
+	end
+end
 
 local function pluginIterate(fun)
 	for _, _p in ipairs(config.plugins.miq.plugins) do
@@ -29,6 +34,20 @@ end
 
 local function pluginExists(name)
 	return util.fileExists(USERDIR .. '/plugins/' .. name) or util.fileExists(USERDIR .. '/plugins/' .. name .. '.lua')
+end
+
+local function postInstall(spec)
+	local promise = Promise.new()
+	core.add_thread(function()
+		local folder = USERDIR .. '/plugins/' .. util.plugName(spec.name)
+		local logs, exit = util.exec {'sh', '-c', string.format('cd %s && %s', folder, spec.run)}
+		if exit ~= 0 then
+			promise:reject(logs)
+			return
+		end
+		promise:resolve()
+	end)
+	return promise
 end
 
 local function isFilePath(path)
@@ -46,17 +65,27 @@ local function isFilePath(path)
 
 	return false
 end
- 
+
+local M = {}
+
 function M.installSingle(spec)
 	spec.installMethod = spec.installMethod or (isFilePath(spec.name) and 'local') or config.plugins.miq.installMethod
 	local mg = managers[spec.installMethod]
 	local name = util.plugName(spec.name)
 
-	local function done()
-		core.log(string.format('[Miq] Installed %s!', name))
-		db.addPlugin(spec)
-	end
+	log(string.format('[Miq] (Debug) Using %s install method for %s', spec.installMethod, name))
+
+	local didpost
 	local fail
+	local function done()
+		if not spec.run or didpost then
+			core.log(string.format('[Miq] Installed %s!', name))
+			db.addPlugin(spec)
+			return
+		end
+		didpost = true
+		postInstall(spec):done(done):fail(fail)
+	end
 	fail = function(err)
 		if not config.plugins.miq.fallback or spec.installMethod == 'miq' then
 			core.error(string.format('[Miq] Could not install %s.\n%s', name, err))
