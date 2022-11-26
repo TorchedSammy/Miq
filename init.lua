@@ -108,7 +108,11 @@ end
 
 function M.reinstall()
 	pluginIterate(function(p)
-		M.reinstallSingle(p)
+		local name = util.plugName(p.name)
+
+		if pluginExists(name) then
+			M.reinstallSingle(p)
+		end
 	end)
 end
 
