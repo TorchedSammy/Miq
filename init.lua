@@ -54,6 +54,24 @@ function M.installSingle(spec)
 	mg.installPlugin(spec.name):done(done):fail(fail)
 end
 
+function M.remove(spec)
+	local slug = util.slugify(spec.name)
+	-- a name that cannot be slugified is a singleton,
+	-- and we want to cover the edge case of someone having a singleton
+	-- and non singleton with the same name (its the correct thing to do anyway)
+	if slug then
+		os.remove(USERDIR .. '/plugins/' .. name)
+	else
+		os.remove(USERDIR .. '/plugins/' .. name .. '.lua')
+	end
+	-- TODO: remove from db
+end
+
+function M.reinstallSingle(spec)
+	M.remove(spec)
+	M.installSingle(spec)
+end
+
 function M.install()
 	pluginIterate(function(p)
 		-- TODO: check if name or url can be slugified early,
@@ -78,7 +96,12 @@ function M.update()
 			M.installSingle(p)
 			return
 		end
-		local installMethod = db.getPlugin(p.name).installMethod
+		local dbPlug = db.getPlugin(p.name)
+		if not dbPlug then
+			M.reinstallSingle(p)
+			return
+		end
+		local installMethod = dbPlug.installMethod
 		local mg = managers[installMethod]
 
 		mg.updatePlugin(realName):done(function(already)
