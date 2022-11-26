@@ -100,8 +100,8 @@ function M.install()
 		local name = util.plugName(p.name)
 
 		if pluginExists(name) then
-			--core.log(string.format('[Miq] %s is already installed.', name))
-			--return
+			core.log(string.format('[Miq] %s is already installed.', name))
+			return
 		end
 		M.installSingle(p)
 	end)
