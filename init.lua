@@ -56,6 +56,7 @@ end
 
 function M.remove(spec)
 	local slug = util.slugify(spec.name)
+	local name = util.plugName(spec.name)
 	-- a name that cannot be slugified is a singleton,
 	-- and we want to cover the edge case of someone having a singleton
 	-- and non singleton with the same name (its the correct thing to do anyway)
