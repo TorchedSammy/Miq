@@ -54,6 +54,11 @@ function M.installSingle(spec)
 	mg.installPlugin(spec.name):done(done):fail(fail)
 end
 
+function M.reinstallSingle(spec)
+	M.remove(spec)
+	M.installSingle(spec)
+end
+
 function M.remove(spec)
 	local slug = util.slugify(spec.name)
 	local name = util.plugName(spec.name)
@@ -66,11 +71,6 @@ function M.remove(spec)
 		os.remove(USERDIR .. '/plugins/' .. name .. '.lua')
 	end
 	-- TODO: remove from db
-end
-
-function M.reinstallSingle(spec)
-	M.remove(spec)
-	M.installSingle(spec)
 end
 
 function M.install()
@@ -86,6 +86,12 @@ function M.install()
 			--return
 		end
 		M.installSingle(p)
+	end)
+end
+
+function M.reinstall()
+	pluginIterate(function(p)
+		M.reinstallSingle(p)
 	end)
 end
 
