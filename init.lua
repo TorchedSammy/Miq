@@ -79,7 +79,8 @@ function M.installSingle(spec)
 	local fail
 	local function done()
 		if not spec.run or didpost then
-			core.log(string.format('[Miq] Installed %s!', name))
+			core.log(string.format('[Miq] Installed %s', name))
+			spec.fullyInstalled = true
 			db.addPlugin(spec)
 			return
 		end
@@ -87,7 +88,9 @@ function M.installSingle(spec)
 		postInstall(spec):done(done):fail(fail)
 	end
 	fail = function(err)
-		core.error(string.format('[Miq] Could not install %s.\n%s', name, err))
+		core.error(string.format('[Miq] Could not install %s\n%s', name, err))
+		spec.fullyInstalled = false
+		db.addPlugin(spec)
 	end
 	mg.installPlugin(spec):done(done):fail(fail)
 end
@@ -118,9 +121,11 @@ function M.install()
 		-- unless the user has specified a repo url
 		-- (this is in the case of single files like bigclock)
 		local name = p.name
+		local dbPlugin = db.getPlugin(p.plugin) or {}
+		local fullyInstalled = dbPlugin.fullyInstalled
 
-		if pluginExists(name) then
-			core.log(string.format('[Miq] %s is already installed.', name))
+		if (pluginExists(name) and (p.run and fullyInstalled)) or (not p.run and pluginExists(name))then
+			core.log(string.format('[Miq] %s is already installed', name))
 			return
 		end
 		M.installSingle(p)
@@ -153,15 +158,28 @@ function M.update()
 		local installMethod = dbPlug.installMethod
 		local mg = managers[installMethod]
 
-		mg.updatePlugin(p):done(function(already)
+		local didpost
+		local fail
+		local function done(already)
 			if already then
-				core.log(string.format('[Miq] %s has already been updated.', realName))
+				core.log(string.format('[Miq] %s has already been updated', realName))
 				return
 			end
-			core.log(string.format('[Miq] Updated %s!', realName))
-		end):fail(function()
-			core.log(string.format('[Miq] Could not update %s.', realName))
-		end)
+
+			if not p.run or didpost then
+				core.log(string.format('[Miq] Updated %s', realName))
+				p.fullyInstalled = true
+				db.addPlugin(p)
+				return
+			end
+			didpost = true
+			postInstall(p):done(done):fail(fail)
+		end
+		fail = function(err)
+			core.log(string.format('[Miq] Could not update %s\n%s', realName, err))
+			db.getPlugin(p.plugin).fullyInstalled = p.run and false or true
+		end
+		mg.updatePlugin(p):done(done):fail(fail)
 	end)
 end
 
