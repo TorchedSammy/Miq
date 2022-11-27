@@ -6,7 +6,7 @@ function M.exec(cmd, opts)
 		while proc:running() do
 			coroutine.yield(0.1)
 		end
-		return proc:read_stdout() or proc:read_stderr() or '<none>', proc:returncode()
+		return (proc:read_stdout() or '<no stdout>') .. (proc:read_stderr() or '<no stderr>'), proc:returncode()
 	end
 
 	return nil
