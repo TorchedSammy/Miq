@@ -156,8 +156,9 @@ function M.update()
 			M.reinstallSingle(p)
 			return
 		end
-		local installMethod = dbPlug.installMethod
+		local installMethod = dbPlug.installMethod or (isFilePath(dbPlug.plugin) and 'local') or config.plugins.miq.installMethod
 		local mg = managers[installMethod]
+		log(installMethod)
 
 		local didpost
 		local fail
