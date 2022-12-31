@@ -150,6 +150,7 @@ function M.update()
 			M.installSingle(p)
 			return
 		end
+		log(string.format('[Miq] Attempting to update %s', realName))
 		local dbPlug = db.getPlugin(p.plugin)
 		if not dbPlug then
 			M.reinstallSingle(p)
@@ -168,6 +169,9 @@ function M.update()
 
 			if not p.run or didpost then
 				core.log(string.format('[Miq] Updated %s', realName))
+				-- set install method again to make it known.
+				-- fixes an error after updating once
+				p.installMethod = installMethod
 				p.fullyInstalled = true
 				db.addPlugin(p)
 				return
