@@ -9,7 +9,7 @@ function M.installPlugin(spec)
 	local promise = Promise.new()
 	core.add_thread(function()
 		local plugin = util.plugName(common.basename(spec.plugin))
-		local _, _ = util.exec {'ln', '-s', common.home_expand(spec.plugin), USERDIR .. '/plugins/' .. plugin}
+		local out, _ = util.exec {'ln', '-s', common.home_expand(spec.plugin), USERDIR .. '/plugins/' .. plugin}
 		promise:resolve()
 	end)
 	return promise

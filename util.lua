@@ -36,4 +36,12 @@ function M.gitCmd(args, dir)
 	return M.exec {'git', '-C', dir, table.unpack(args)}
 end
 
+function M.dehexify(hex)
+   return (hex:gsub('%x%x', function(digits) return string.char(tonumber(digits, 16)) end))
+end
+
+function M.hexify(str)
+   return (str:gsub('.', function(char) return string.format('%02x', char:byte()) end))
+end
+
 return M

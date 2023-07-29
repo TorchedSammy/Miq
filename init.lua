@@ -6,6 +6,7 @@ local config = require 'core.config'
 local db = require 'plugins.miq.db'
 local managers = require 'plugins.miq.managers'
 local util = require 'plugins.miq.util'
+local json = require 'plugins.miq.json'
 local Promise = require 'plugins.miq.promise'
 
 db.init()
@@ -14,7 +15,11 @@ config.plugins.miq = common.merge({
 	installMethod = 'miq',
 	fallback = true,
 	debug = false,
-	plugins = {}
+	plugins = {},
+	storeDir = string.format('%s/.local/share/miq', HOME),
+	repos = {
+		'https://github.com/lite-xl/lite-xl-plugins.git:2.1'
+	}
 }, config.plugins.miq)
 
 local function log(msg)
@@ -69,9 +74,18 @@ end
 local M = {}
 
 function M.installSingle(spec)
-	spec.installMethod = spec.installMethod or (isFilePath(spec.plugin) and 'local') or config.plugins.miq.installMethod
-	local mg = managers[spec.installMethod]
+	spec.installMethod = spec.installMethod
+	or (isFilePath(spec.plugin) and 'local')
+	or config.plugins.miq.installMethod
+
+	local slug = util.slugify(spec.name)
+	if not slug or spec.repo then
+		-- assume this is a plugin from a multi-plugin repo
+		spec.installMethod = 'repo'
+	end
+
 	local name = spec.name or util.plugName(spec.plugin)
+	local mg = managers[spec.installMethod]
 
 	log(string.format('[Miq] (Debug) Using %s install method for %s', spec.installMethod, name))
 
@@ -92,7 +106,9 @@ function M.installSingle(spec)
 		spec.fullyInstalled = false
 		db.addPlugin(spec)
 	end
-	mg.installPlugin(spec):done(done):fail(fail)
+	mg.installPlugin(spec)
+	:done(done)
+	:fail(fail)
 end
 
 function M.reinstallSingle(spec)
@@ -114,8 +130,35 @@ function M.remove(spec)
 	-- TODO: remove from db
 end
 
+local repoDir = USERDIR .. '/miq-repos/'
+-- repo is a string with the following format:
+-- url:tag
+-- example https://github.com/lite-xl/lite-xl-plugins.git:2.1
+function M.downloadRepo(url, dir)
+	local out, _ = util.exec {'git', 'clone', url, dir}
+end
+
+local function updateManifestCache(repo)
+	local f = io.open(repoDir .. util.hexify(repo) .. '/manifest.json')
+	local content = f:read '*a'
+	db.addRepo(util.hexify(repo), content)
+end
+
 function M.install()
-	pluginIterate(function(p)
+	-- handle repos first (if supplied)
+	local promise = Promise.new()
+	core.add_thread(function()
+		for _, repo in ipairs(config.plugins.miq.repos) do
+			local url = repo:match('^%w+://[^:]+')
+			if not util.fileExists(repoDir .. util.hexify(repo)) then
+				M.downloadRepo(url, repoDir .. util.hexify(repo))
+			end
+			updateManifestCache(repo)
+		end
+		promise:resolve()
+	end)
+
+	promise:done(pluginIterate(function(p)
 		-- TODO: check if name or url can be slugified early,
 		-- and block if it cant
 		-- unless the user has specified a repo url
@@ -129,7 +172,7 @@ function M.install()
 			return
 		end
 		M.installSingle(p)
-	end)
+	end))
 end
 
 function M.reinstall()
