@@ -49,4 +49,16 @@ function M.hexify(str)
    return (str:gsub('.', function(char) return string.format('%02x', char:byte()) end))
 end
 
+function M.repoURL(repo)
+	return repo:match('^%w+://[^:]+')
+end
+
+function M.repoTag(repo)
+	return repo:match('^%w+://.+:(.+)')
+end
+
+function M.repoDir(repo)
+	return M.hexify(M.repoURL(repo))
+end
+
 return M
