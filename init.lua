@@ -6,6 +6,7 @@ local config = require 'core.config'
 local db = require 'plugins.miq.db'
 local managers = require 'plugins.miq.managers'
 local util = require 'plugins.miq.util'
+local json = require 'plugins.miq.json'
 local Promise = require 'plugins.miq.promise'
 
 db.init()
@@ -14,7 +15,11 @@ config.plugins.miq = common.merge({
 	installMethod = 'miq',
 	fallback = true,
 	debug = false,
-	plugins = {}
+	plugins = {},
+	storeDir = string.format('%s/.local/share/miq', HOME),
+	repos = {
+		'https://github.com/lite-xl/lite-xl-plugins.git:2.2'
+	}
 }, config.plugins.miq)
 
 local function log(msg)
@@ -69,9 +74,18 @@ end
 local M = {}
 
 function M.installSingle(spec)
-	spec.installMethod = spec.installMethod or (isFilePath(spec.plugin) and 'local') or config.plugins.miq.installMethod
-	local mg = managers[spec.installMethod]
+	spec.installMethod = spec.installMethod
+	or (isFilePath(spec.plugin) and 'local')
+	or config.plugins.miq.installMethod
+
+	local slug = util.slugify(spec.name)
+	if not slug or spec.repo then
+		-- assume this is a plugin from a multi-plugin repo
+		spec.installMethod = 'repo'
+	end
+
 	local name = spec.name or util.plugName(spec.plugin)
+	local mg = managers[spec.installMethod]
 
 	log(string.format('[Miq] (Debug) Using %s install method for %s', spec.installMethod, name))
 
@@ -92,7 +106,9 @@ function M.installSingle(spec)
 		spec.fullyInstalled = false
 		db.addPlugin(spec)
 	end
-	mg.installPlugin(spec):done(done):fail(fail)
+	mg.installPlugin(spec)
+	:done(done)
+	:fail(fail)
 end
 
 function M.reinstallSingle(spec)
@@ -114,21 +130,62 @@ function M.remove(spec)
 	-- TODO: remove from db
 end
 
-function M.install()
-	pluginIterate(function(p)
-		-- TODO: check if name or url can be slugified early,
-		-- and block if it cant
-		-- unless the user has specified a repo url
-		-- (this is in the case of single files like bigclock)
-		local name = p.name
-		local dbPlugin = db.getPlugin(p.plugin) or {}
-		local fullyInstalled = dbPlugin.fullyInstalled
+local repoDir = USERDIR .. '/miq-repos/'
+-- repo is a string with the following format:
+-- url:tag
+-- example https://github.com/lite-xl/lite-xl-plugins.git:2.1
+function M.downloadRepo(url, tag, dir)
+	local out, code = util.exec {'git', 'clone', url, dir}
+	if code ~= 0 then
+		return out, code
+	end
 
-		if (pluginExists(name) and (p.run and fullyInstalled)) or (not p.run and pluginExists(name))then
-			core.log(string.format('[Miq] %s is already installed', name))
-			return
+	local out, code = util.exec {'sh', '-c', string.format('cd %s && git checkout %s', dir, tag)}
+	return out, code
+end
+
+local function updateManifestCache(repo)
+	local f = io.open(repoDir .. util.repoDir(repo) .. '/manifest.json')
+	local content = f:read '*a'
+	db.addRepo(util.repoDir(repo), content)
+end
+
+function M.install()
+	local p = Promise.new()
+	core.add_thread(function()
+		-- handle repos first (if supplied)
+		for _, repo in ipairs(config.plugins.miq.repos) do
+			local url = util.repoURL(repo)
+			local tag = util.repoTag(repo)
+			if not util.fileExists(repoDir .. util.repoDir(repo)) then
+				local out, code = M.downloadRepo(url, tag, repoDir .. util.repoDir(repo))
+				if code ~= 0 then
+					--core.error(string.format('[Miq] Could not switch to tag of %s for plugin repo %s\n%s', tag, url, out))
+					p:reject(out)
+				else
+					updateManifestCache(repo)
+				end
+			end
 		end
-		M.installSingle(p)
+		p:resolve()
+
+		p:done(function()
+			pluginIterate(function(p)
+				-- TODO: check if name or url can be slugified early,
+				-- and block if it cant
+				-- unless the user has specified a repo url
+				-- (this is in the case of single files like bigclock)
+				local name = p.name
+				local dbPlugin = db.getPlugin(p.plugin) or {}
+				local fullyInstalled = dbPlugin.fullyInstalled
+
+				if (pluginExists(name) and (p.run and fullyInstalled)) or (not p.run and pluginExists(name))then
+					core.log(string.format('[Miq] %s is already installed', name))
+					return
+				end
+				M.installSingle(p)
+			end)
+		end)
 	end)
 end
 

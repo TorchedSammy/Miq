@@ -1,8 +1,11 @@
 local common = require 'core.common'
+local json = require 'plugins.miq.json'
 local util = require 'plugins.miq.util'
 
+local manifests = {} -- hexified keys for repo urls (excluding the tag)
 local data = {
-	plugins = {}
+	plugins = {},
+	repos = {} -- keys are hexified
 }
 local M = {}
 
@@ -26,7 +29,19 @@ function M.addPlugin(spec)
 end
 
 function M.getPlugin(id)
-	return data.plugins[id]
+	local plug = data.plugins[id]
+	if plug then
+		return plug
+	end
+end
+
+function M.addRepo(repo, manifest)
+	data.repos[repo] = true
+	manifests[repo] = json.decode(manifest)
+end
+
+function M.manifests()
+	return manifests
 end
 
 return M

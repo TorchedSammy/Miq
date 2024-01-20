@@ -7,7 +7,6 @@ then either calling the `install` function or running the install command.
 
 > **Warning**
 > Miq is work in progress!
-> To test out Miq, I use it myself, but there may be other problems.
 > If there are, please report them by opening an issue.
 
 # Install
@@ -30,6 +29,13 @@ config.plugins.miq.plugins = {
 	-- Normal plugins hosted on a single git repo can be specified with AuthorName/RepoName
 	'lite-xl/lite-xl-lsp',
 
+	-- Plugins on the central lite-xl-plugins repo can be specified by name
+	'autoinsert'
+
+	-- If you want to install a plugin with from a specific repo, it can be done
+	-- format would be url:branch/commit
+	{'plugin', repo = 'https://github.com/user/lite-xl-plugins:master'}
+
 	-- If needed, you can setup a local plugin, which will simply be symlinked.
 	-- I personally do this for Miq.
 	'~/lite-xl-plugin-path'
@@ -42,6 +48,15 @@ config.plugins.miq.plugins = {
 	{'vincens2005/lite-xl-gitdiff-highlight', name = 'gitdiff_highlight'}
 }
 ```
+
+Repositories that host several plugins (like the default lite-xl-plugins repo) can
+be specified with the following:
+```lua
+config.plugins.miq.repos = {
+	'https://github.com/lite-xl/lite-xl-plugins.git:2.2'
+}
+```
+Then any plugin which is specified by a simple name will be installed from these repositories.
 
 Once all plugins are specified, the `Miq: Install` command can be ran to install them.
 
@@ -65,7 +80,11 @@ Here are the available fields for a plugin spec:
 	-- name than what Miq defaults to.
 	-- By default, this will simply be based on the identifier, lowercasing it
 	-- and removing "lite-xl-" prefixes and ".lxl" suffixes
-	name = ''
+	name = '',
+	-- The URL of the repository which hosts the plugin. This is intended for repositories
+	-- that host multiple plugins (like lite-xl-plugins) and is only useful to be specified
+	-- if you have 2 repositories with a plugin that would cause conflicts (by having the same name).
+	repo = ''
 }
 ```
 
