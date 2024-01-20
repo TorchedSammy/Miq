@@ -18,7 +18,7 @@ config.plugins.miq = common.merge({
 	plugins = {},
 	storeDir = string.format('%s/.local/share/miq', HOME),
 	repos = {
-		'https://github.com/lite-xl/lite-xl-plugins.git:2.1'
+		'https://github.com/lite-xl/lite-xl-plugins.git:2.2'
 	}
 }, config.plugins.miq)
 
