@@ -137,51 +137,56 @@ local repoDir = USERDIR .. '/miq-repos/'
 function M.downloadRepo(url, tag, dir)
 	local out, code = util.exec {'git', 'clone', url, dir}
 	if code ~= 0 then
-		-- TODO: error
+		return out, code
 	end
 
 	local out, code = util.exec {'sh', '-c', string.format('cd %s && git checkout %s', dir, tag)}
-	if code ~= 0 then
-		core.error(string.format('[Miq] Could not switch to tag of %s for plugin repo %s\n%s', tag, url, out))
-	end
+	return out, code
 end
 
 local function updateManifestCache(repo)
-	local f = io.open(repoDir .. util.hexify(repo) .. '/manifest.json')
+	local f = io.open(repoDir .. util.repoDir(repo) .. '/manifest.json')
 	local content = f:read '*a'
-	db.addRepo(util.hexify(repo), content)
+	db.addRepo(util.repoDir(repo), content)
 end
 
 function M.install()
-	-- handle repos first (if supplied)
-	local promise = Promise.new()
+	local p = Promise.new()
 	core.add_thread(function()
+		-- handle repos first (if supplied)
 		for _, repo in ipairs(config.plugins.miq.repos) do
-			local url = repo:match('^%w+://[^:]+')
-			local tag = repo:match('^%w+://.+:(.+)')
-			if not util.fileExists(repoDir .. util.hexify(repo)) then
-				M.downloadRepo(url, tag, repoDir .. util.hexify(repo))
+			local url = util.repoURL(repo)
+			local tag = util.repoTag(repo)
+			if not util.fileExists(repoDir .. util.repoDir(repo)) then
+				local out, code = M.downloadRepo(url, tag, repoDir .. util.repoDir(repo))
+				if code ~= 0 then
+					--core.error(string.format('[Miq] Could not switch to tag of %s for plugin repo %s\n%s', tag, url, out))
+					p:reject(out)
+				else
+					updateManifestCache(repo)
+				end
 			end
-			updateManifestCache(repo)
 		end
-		promise:resolve()
+		p:resolve()
+
+		p:done(function()
+			pluginIterate(function(p)
+				-- TODO: check if name or url can be slugified early,
+				-- and block if it cant
+				-- unless the user has specified a repo url
+				-- (this is in the case of single files like bigclock)
+				local name = p.name
+				local dbPlugin = db.getPlugin(p.plugin) or {}
+				local fullyInstalled = dbPlugin.fullyInstalled
+
+				if (pluginExists(name) and (p.run and fullyInstalled)) or (not p.run and pluginExists(name))then
+					core.log(string.format('[Miq] %s is already installed', name))
+					return
+				end
+				M.installSingle(p)
+			end)
+		end)
 	end)
-
-	promise:done(pluginIterate(function(p)
-		-- TODO: check if name or url can be slugified early,
-		-- and block if it cant
-		-- unless the user has specified a repo url
-		-- (this is in the case of single files like bigclock)
-		local name = p.name
-		local dbPlugin = db.getPlugin(p.plugin) or {}
-		local fullyInstalled = dbPlugin.fullyInstalled
-
-		if (pluginExists(name) and (p.run and fullyInstalled)) or (not p.run and pluginExists(name))then
-			core.log(string.format('[Miq] %s is already installed', name))
-			return
-		end
-		M.installSingle(p)
-	end))
 end
 
 function M.reinstall()

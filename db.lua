@@ -1,11 +1,11 @@
-	local common = require 'core.common'
+local common = require 'core.common'
 local json = require 'plugins.miq.json'
 local util = require 'plugins.miq.util'
 
-local manifests = {}
+local manifests = {} -- hexified keys for repo urls (excluding the tag)
 local data = {
 	plugins = {},
-	repos = {}
+	repos = {} -- keys are hexified
 }
 local M = {}
 
