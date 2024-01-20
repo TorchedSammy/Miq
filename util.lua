@@ -28,8 +28,13 @@ function M.plugName(url)
 end
 
 function M.fileExists(path)
-	local f <close> = io.open(path)
-	return f ~= nil
+	local f = io.open(path)
+	if f then
+		f:close()
+		return true
+	end
+
+	return false
 end
 
 function M.gitCmd(args, dir)

@@ -13,9 +13,11 @@ function M.init()
 end
 
 function M.write()
-	local f <close> = io.open(USERDIR .. '/.miq-store', 'w+')
+	local f = io.open(USERDIR .. '/.miq-store', 'w+')
 	if not f then return end -- TODO?
 	f:write('return ' .. common.serialize(data))
+
+	f:close()
 end
 
 function M.addPlugin(spec)
