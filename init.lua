@@ -78,7 +78,7 @@ function M.installSingle(spec)
 	or (isFilePath(spec.plugin) and 'local')
 	or config.plugins.miq.installMethod
 
-	local slug = util.slugify(spec.name)
+	local slug = util.slugify(spec.plugin)
 	if not slug or spec.repo then
 		-- assume this is a plugin from a multi-plugin repo
 		spec.installMethod = 'repo'
