@@ -134,8 +134,16 @@ local repoDir = USERDIR .. '/miq-repos/'
 -- repo is a string with the following format:
 -- url:tag
 -- example https://github.com/lite-xl/lite-xl-plugins.git:2.1
-function M.downloadRepo(url, dir)
-	local out, _ = util.exec {'git', 'clone', url, dir}
+function M.downloadRepo(url, tag, dir)
+	local out, code = util.exec {'git', 'clone', url, dir}
+	if code ~= 0 then
+		-- TODO: error
+	end
+
+	local out, code = util.exec {'sh', '-c', string.format('cd %s && git checkout %s', dir, tag)}
+	if code ~= 0 then
+		core.error(string.format('[Miq] Could not switch to tag of %s for plugin repo %s\n%s', tag, url, out))
+	end
 end
 
 local function updateManifestCache(repo)
@@ -150,8 +158,9 @@ function M.install()
 	core.add_thread(function()
 		for _, repo in ipairs(config.plugins.miq.repos) do
 			local url = repo:match('^%w+://[^:]+')
+			local tag = repo:match('^%w+://.+:(.+)')
 			if not util.fileExists(repoDir .. util.hexify(repo)) then
-				M.downloadRepo(url, repoDir .. util.hexify(repo))
+				M.downloadRepo(url, tag, repoDir .. util.hexify(repo))
 			end
 			updateManifestCache(repo)
 		end
