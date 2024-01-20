@@ -17,7 +17,6 @@ function M.installPlugin(spec)
 			-- the repo field in a plugin spec isn't supposed to have it,
 			-- since having a plugin on a specific version of a plugin repo
 			-- does not seem like the most wise thing
-			print(repo)
 			local manifest = manifests[repo]
 			for _, addon in ipairs(manifest.addons) do
 				if addon.id == spec.name then
