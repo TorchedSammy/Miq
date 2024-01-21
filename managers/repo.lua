@@ -12,7 +12,9 @@ local repoDir = USERDIR .. '/miq-repos/'
 function M.installPlugin(spec)
 	local promise = Promise.new()
 	core.add_thread(function()
+		local setup = false
 		local manifests = db.manifests()
+
 		local function setupPlugin(repo)
 			-- match is for preventative measure against a user who includes the tag
 			-- the repo field in a plugin spec isn't supposed to have it,
@@ -22,25 +24,29 @@ function M.installPlugin(spec)
 			local manifest = manifests[repo]
 			for _, addon in ipairs(manifest.addons) do
 				if addon.id == spec.name then
-					if addon.type and addon.type ~= 'plugin' then return end
+					if addon.type and (addon.type ~= 'plugin' and addon.type ~= 'library') then return end
+					core.log(addon.type)
 					if addon.remote then
 						local out, code = manifestlib.downloadRepo(addon.remote)
 						if code ~= 0 then
 							promise:reject(out)
+							return true
 						end
 
 						spec.repo = addon.remote
 						setupPlugin(util.repoDir(spec.repo))
 
-						return
+						return true
 					end
 
-					if addon.path then
+					if addon.path or addon.type == 'library' then
 						localManager.installPlugin({
-							plugin = repoDir .. repo .. '/' .. addon.path,
-							name = spec.name
+							plugin = addon.type ~= 'library' and (repoDir .. repo .. '/' .. addon.path) or (repoDir .. repo),
+							name = spec.name,
+							library = addon.type == 'library'
 						}):forward(promise)
-						return
+						setup = true
+						return true
 					end
 				end
 			end
@@ -48,10 +54,16 @@ function M.installPlugin(spec)
 
 		if spec.repo then
 			setupPlugin(util.repoDir(spec.repo))
-		end
+		else
+			local stop
+			for repo, manifest in pairs(db.manifests()) do
+				stop = setupPlugin(repo)
+				if stop then break end
+			end
 
-		for repo, manifest in pairs(db.manifests()) do
-			setupPlugin(repo)
+			if not setup and not stop then
+				promise:reject('No suitable addon repository found.')
+			end
 		end
 	end)
 	return promise

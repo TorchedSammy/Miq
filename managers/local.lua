@@ -11,10 +11,13 @@ function M.installPlugin(spec)
 		local plugin = util.plugName(common.basename(spec.plugin))
 		local src = common.home_expand(spec.plugin)
 		if not util.fileExists(src) then
-			promise:reject(string.format('Source %s does not exist'), src)
+			promise:reject(string.format('Source %s does not exist', src))
 		end
 
-		local out, _ = util.exec {'ln', '-s', src, USERDIR .. '/plugins/' .. plugin}
+		local destDir = USERDIR .. string.format('/%s/', spec.library and 'libraries' or 'plugins')
+		system.mkdir(destDir)
+
+		local out, _ = util.exec {'ln', '-s', src, util.join {destDir, spec.name or plugin, ''}}
 		promise:resolve()
 	end)
 	return promise
