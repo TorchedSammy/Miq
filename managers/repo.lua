@@ -20,12 +20,10 @@ function M.installPlugin(spec)
 			-- the repo field in a plugin spec isn't supposed to have it,
 			-- since having a plugin on a specific version of a plugin repo
 			-- does not seem like the most wise thing
-			core.log(util.dehexify(repo))
 			local manifest = manifests[repo]
 			for _, addon in ipairs(manifest.addons) do
 				if addon.id == spec.name then
 					if addon.type and (addon.type ~= 'plugin' and addon.type ~= 'library') then return end
-					core.log(addon.type)
 					if addon.remote then
 						local out, code = manifestlib.downloadRepo(addon.remote)
 						if code ~= 0 then
@@ -42,7 +40,7 @@ function M.installPlugin(spec)
 					if addon.path or addon.type == 'library' then
 						localManager.installPlugin({
 							plugin = addon.type ~= 'library' and (repoDir .. repo .. '/' .. addon.path) or (repoDir .. repo),
-							name = spec.name,
+							name = addon.path and common.basename(addon.path) or spec.name,
 							library = addon.type == 'library'
 						}):forward(promise)
 						setup = true
