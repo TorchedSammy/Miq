@@ -98,6 +98,8 @@ function M.installSingle(spec)
 			core.log(string.format('[Miq] Installed %s', name))
 			spec.fullyInstalled = true
 			db.addPlugin(spec)
+
+			pcall(require, 'plugins.' .. name)
 			return
 		end
 		didpost = true
