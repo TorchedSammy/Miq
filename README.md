@@ -84,7 +84,9 @@ Here are the available fields for a plugin spec:
 	-- The URL of the repository which hosts the plugin. This is intended for repositories
 	-- that host multiple plugins (like lite-xl-plugins) and is only useful to be specified
 	-- if you have 2 repositories with a plugin that would cause conflicts (by having the same name).
-	repo = ''
+	repo = '',
+	-- Dependencies can be declared the same way plugins can, since they are just plugins.
+	dependencies = {}
 }
 ```
 

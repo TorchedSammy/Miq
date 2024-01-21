@@ -29,11 +29,12 @@ local function log(msg)
 	end
 end
 
-local function pluginIterate(fun)
-	for _, _p in ipairs(config.plugins.miq.plugins) do
+local function pluginIterate(fun, list)
+	for _, _p in ipairs(list or config.plugins.miq.plugins) do
 		local p = type(_p) == 'string' and {plugin = _p} or _p
 		p.plugin = p[1] or p.plugin
 		p.name = p.name or util.plugName(p.plugin)
+
 		fun(p)
 	end
 end
@@ -146,21 +147,29 @@ function M.install()
 		end
 		p:resolve()
 
+		local function installPlugin(p)
+			-- TODO: check if name or url can be slugified early,
+			-- and block if it cant
+			-- unless the user has specified a repo url
+			-- (this is in the case of single files like bigclock)
+			local name = p.name
+			local dbPlugin = db.getPlugin(p.plugin) or {}
+			local fullyInstalled = dbPlugin.fullyInstalled
+
+			if (pluginExists(name) and (p.run and fullyInstalled)) or (not p.run and pluginExists(name))then
+				core.log(string.format('[Miq] %s is already installed', name))
+				return
+			end
+			M.installSingle(p)
+		end
+
 		p:done(function()
 			pluginIterate(function(p)
-				-- TODO: check if name or url can be slugified early,
-				-- and block if it cant
-				-- unless the user has specified a repo url
-				-- (this is in the case of single files like bigclock)
-				local name = p.name
-				local dbPlugin = db.getPlugin(p.plugin) or {}
-				local fullyInstalled = dbPlugin.fullyInstalled
-
-				if (pluginExists(name) and (p.run and fullyInstalled)) or (not p.run and pluginExists(name))then
-					core.log(string.format('[Miq] %s is already installed', name))
-					return
+				if p.dependencies then
+					pluginIterate(installPlugin, p.dependencies)
 				end
-				M.installSingle(p)
+
+				installPlugin(p)
 			end)
 		end)
 	end)
