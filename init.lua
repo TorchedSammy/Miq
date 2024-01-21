@@ -5,6 +5,7 @@ local command = require 'core.command'
 local config = require 'core.config'
 local db = require 'plugins.miq.db'
 local managers = require 'plugins.miq.managers'
+local manifest = require 'plugins.miq.manifest'
 local util = require 'plugins.miq.util'
 local json = require 'plugins.miq.json'
 local Promise = require 'plugins.miq.promise'
@@ -130,26 +131,6 @@ function M.remove(spec)
 	-- TODO: remove from db
 end
 
-local repoDir = USERDIR .. '/miq-repos/'
--- repo is a string with the following format:
--- url:tag
--- example https://github.com/lite-xl/lite-xl-plugins.git:2.1
-function M.downloadRepo(url, tag, dir)
-	local out, code = util.exec {'git', 'clone', url, dir}
-	if code ~= 0 then
-		return out, code
-	end
-
-	local out, code = util.exec {'sh', '-c', string.format('cd %s && git checkout %s', dir, tag)}
-	return out, code
-end
-
-local function updateManifestCache(repo)
-	local f = io.open(repoDir .. util.repoDir(repo) .. '/manifest.json')
-	local content = f:read '*a'
-	db.addRepo(util.repoDir(repo), content)
-end
-
 function M.install()
 	local p = Promise.new()
 	core.add_thread(function()
@@ -157,14 +138,10 @@ function M.install()
 		for _, repo in ipairs(config.plugins.miq.repos) do
 			local url = util.repoURL(repo)
 			local tag = util.repoTag(repo)
-			if not util.fileExists(repoDir .. util.repoDir(repo)) then
-				local out, code = M.downloadRepo(url, tag, repoDir .. util.repoDir(repo))
-				if code ~= 0 then
-					--core.error(string.format('[Miq] Could not switch to tag of %s for plugin repo %s\n%s', tag, url, out))
-					p:reject(out)
-				else
-					updateManifestCache(repo)
-				end
+			local out, code = manifest.downloadRepo(repo)
+			if code ~= 0 then
+				--core.error(string.format('[Miq] Could not switch to tag of %s for plugin repo %s\n%s', tag, url, out))
+				p:reject(out)
 			end
 		end
 		p:resolve()

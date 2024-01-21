@@ -2,6 +2,7 @@ local core = require 'core'
 local common = require 'core.common'
 local util = require 'plugins.miq.util'
 local db = require 'plugins.miq.db'
+local manifestlib = require 'plugins.miq.manifest'
 local localManager = require 'plugins.miq.managers.local'
 local Promise = require 'plugins.miq.promise'
 
@@ -17,24 +18,41 @@ function M.installPlugin(spec)
 			-- the repo field in a plugin spec isn't supposed to have it,
 			-- since having a plugin on a specific version of a plugin repo
 			-- does not seem like the most wise thing
+			core.log(util.dehexify(repo))
 			local manifest = manifests[repo]
 			for _, addon in ipairs(manifest.addons) do
 				if addon.id == spec.name then
 					if addon.type and addon.type ~= 'plugin' then return end
-					localManager.installPlugin({
-						plugin = repoDir .. repo .. '/' .. addon.path,
-						name = spec.name
-					}):forward(promise)
+					if addon.remote then
+						local out, code = manifestlib.downloadRepo(addon.remote)
+						if code ~= 0 then
+							promise:reject(out)
+						end
+
+						spec.repo = addon.remote
+						setupPlugin(util.repoDir(spec.repo))
+
+						return
+					end
+
+					if addon.path then
+						localManager.installPlugin({
+							plugin = repoDir .. repo .. '/' .. addon.path,
+							name = spec.name
+						}):forward(promise)
+						return
+					end
 				end
 			end
 		end
+
 		if spec.repo then
 			setupPlugin(util.repoDir(spec.repo))
 		end
+
 		for repo, manifest in pairs(db.manifests()) do
 			setupPlugin(repo)
 		end
-		promise:resolve()
 	end)
 	return promise
 end

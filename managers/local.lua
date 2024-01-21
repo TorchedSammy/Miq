@@ -9,7 +9,12 @@ function M.installPlugin(spec)
 	local promise = Promise.new()
 	core.add_thread(function()
 		local plugin = util.plugName(common.basename(spec.plugin))
-		local out, _ = util.exec {'ln', '-s', common.home_expand(spec.plugin), USERDIR .. '/plugins/' .. plugin}
+		local src = common.home_expand(spec.plugin)
+		if not util.fileExists(src) then
+			promise:reject(string.format('Source %s does not exist'), src)
+		end
+
+		local out, _ = util.exec {'ln', '-s', src, USERDIR .. '/plugins/' .. plugin}
 		promise:resolve()
 	end)
 	return promise
