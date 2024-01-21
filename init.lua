@@ -137,6 +137,7 @@ function M.install()
 	core.add_thread(function()
 		-- handle repos first (if supplied)
 		for _, repo in ipairs(config.plugins.miq.repos) do
+			core.log('[Miq] Setting up addon repos...')
 			local url = util.repoURL(repo)
 			local tag = util.repoTag(repo)
 			local out, code = manifest.downloadRepo(repo)
