@@ -23,6 +23,7 @@ function M.installPlugin(spec)
 			local manifest = manifests[repo]
 			for _, addon in ipairs(manifest.addons) do
 				if addon.id == spec.name then
+					core.log(spec.name)
 					if addon.type and (addon.type ~= 'plugin' and addon.type ~= 'library') then return end
 					if addon.remote then
 						local out, code = manifestlib.downloadRepo(addon.remote)
@@ -37,15 +38,12 @@ function M.installPlugin(spec)
 						return true
 					end
 
-					if addon.path or addon.type == 'library' then
-						localManager.installPlugin({
-							plugin = addon.type ~= 'library' and (repoDir .. repo .. '/' .. addon.path) or (repoDir .. repo),
-							name = addon.path and common.basename(addon.path) or spec.name,
-							library = addon.type == 'library'
-						}):forward(promise)
-						setup = true
-						return true
-					end
+					localManager.installPlugin({
+						plugin = addon.path and (repoDir .. repo .. '/' .. addon.path) or (repoDir .. repo),
+						name = addon.path and common.basename(addon.path) or spec.name,
+						library = addon.type == 'library'
+					}):forward(promise)
+					setup = true
 				end
 			end
 		end
