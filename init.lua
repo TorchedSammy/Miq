@@ -193,6 +193,9 @@ function M.reinstall()
 	pluginIterate(function(p)
 		local name = p.name
 
+		local dbPlug = db.getPlugin(p.plugin)
+		if dbPlug.installMethod == 'repo' then return end
+
 		if pluginExists(name) then
 			M.reinstallSingle(p)
 		end
