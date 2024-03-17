@@ -38,6 +38,7 @@ function M.installPlugin(spec)
 						return true
 					end
 
+					spec.repo = repo
 					localManager.installPlugin({
 						plugin = addon.path and (repoDir .. repo .. '/' .. addon.path) or (repoDir .. repo),
 						name = addon.path and common.basename(addon.path) or spec.name,
