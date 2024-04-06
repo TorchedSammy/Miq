@@ -5,6 +5,7 @@ local db = require 'plugins.miq.db'
 local manifestlib = require 'plugins.miq.manifest'
 local localManager = require 'plugins.miq.managers.local'
 local Promise = require 'plugins.miq.promise'
+local request = require 'plugins.miq.request.curl'
 
 local M = {}
 
@@ -19,7 +20,6 @@ function M.installPlugin(spec)
 			local manifest = manifests[repo]
 			for _, addon in ipairs(manifest.addons) do
 				if addon.id == spec.name then
-					core.log(spec.name)
 					if addon.type and (addon.type ~= 'plugin' and addon.type ~= 'library') then return end
 					if addon.remote then
 						local out, code = manifestlib.downloadRepo(addon.remote)
@@ -42,7 +42,55 @@ function M.installPlugin(spec)
 						plugin = src,
 						name = name,
 						library = addon.type == 'library'
-					}):forward(promise)
+					}):done(function()
+						-- handle files
+						if addon.files then
+							for _, file in ipairs(addon.files) do
+								if file.arch then
+									if type(file.arch) == 'table' then
+										if not util.contains(file.arch, ARCH) then goto continue end
+									elseif type(file.arch) == 'string' then
+										if file.arch ~= ARCH then goto continue end
+									else
+										promise:reject(string.format('Miq/Repo Manager: Invalid arch type found in plugin %s from repo %s', addon.id, spec.repo))
+									end
+								end
+
+								local filename = common.basename(file.url)
+								local destDir = util.join {USERDIR, spec.library and 'libraries' or 'plugins'}
+								local archivePath = util.join {destDir, filename}
+
+								request.download(file.url, archivePath)
+								:done(function()
+									local extractor
+									local extToChop
+
+									if filename:match '%.tar%.gz$' or filename:match '%.tar' then
+										extToChop = filename:match '%.tar%.gz$' or filename:match '%.tar'
+										extractor = require 'plugins.miq.extractors.tar'
+									end
+
+									if extractor then
+										extractor.extract(archivePath, util.join {destDir, addon.id})
+										:done(function()
+											os.remove(archivePath)
+											promise:resolve()
+										end)
+										:fail(function(out)
+											os.remove(archivePath)
+											promise:reject(out)
+										end)
+									end
+								end)
+								:fail(function(res)
+									promise:reject(res)
+								end)
+
+								::continue::
+							end
+						end
+					end)
+					:fail(function(...) promise:reject(...) end)
 					setup = true
 				end
 			end
