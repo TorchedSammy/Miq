@@ -36,6 +36,8 @@ function M.getPlugin(id)
 end
 
 function M.addRepo(repo, manifest)
+	if not data.repos then data.repos = {} end
+
 	data.repos[repo] = true
 	manifests[repo] = json.decode(manifest)
 end
