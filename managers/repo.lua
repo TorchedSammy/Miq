@@ -16,10 +16,6 @@ function M.installPlugin(spec)
 		local manifests = db.manifests()
 
 		local function setupPlugin(repo)
-			-- match is for preventative measure against a user who includes the tag
-			-- the repo field in a plugin spec isn't supposed to have it,
-			-- since having a plugin on a specific version of a plugin repo
-			-- does not seem like the most wise thing
 			local manifest = manifests[repo]
 			for _, addon in ipairs(manifest.addons) do
 				if addon.id == spec.name then
@@ -39,9 +35,12 @@ function M.installPlugin(spec)
 					end
 
 					spec.repo = repo
+					local src = addon.path and (repoDir .. repo .. '/' .. addon.path) or (repoDir .. repo)
+					local name = addon.path and common.basename(addon.path) or spec.id
+
 					localManager.installPlugin({
-						plugin = addon.path and (repoDir .. repo .. '/' .. addon.path) or (repoDir .. repo),
-						name = addon.path and common.basename(addon.path) or spec.name,
+						plugin = src,
+						name = name,
 						library = addon.type == 'library'
 					}):forward(promise)
 					setup = true
