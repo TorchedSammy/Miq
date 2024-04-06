@@ -25,7 +25,7 @@ function M.updatePlugin(spec)
 		local pdir = USERDIR .. '/plugins/' .. spec.name
 		local log, code = util.gitCmd({'pull'}, pdir)
 		if code ~= 0 then
-			promise:reject()
+			promise:reject(log)
 			return
 		end
 
