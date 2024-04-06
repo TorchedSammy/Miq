@@ -207,7 +207,7 @@ function M.update()
 		end
 		local installMethod = dbPlug.installMethod or (isFilePath(dbPlug.plugin) and 'local') or config.plugins.miq.installMethod
 		local mg = managers[installMethod]
-		log(installMethod)
+		log(string.format('[Miq] (Debug) Using %s install method for %s', installMethod, realName))
 
 		local didpost
 		local fail
