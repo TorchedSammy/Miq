@@ -106,7 +106,7 @@ function M.installSingle(spec)
 		postInstall(spec):done(done):fail(fail)
 	end
 	fail = function(err)
-		core.error(string.format('[Miq] Could not install %s\n%s', name, err))
+		core.error('[Miq] Could not install %s\n%s', name, err)
 		spec.fullyInstalled = false
 		db.addPlugin(spec)
 	end
