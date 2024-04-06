@@ -17,13 +17,13 @@ function M.installPlugin(spec)
 
 		if not util.fileExists(src) then
 			promise:reject(string.format('Source %s does not exist', src))
+			return
 		end
 
 		if util.fileExists(dest) then
 			promise:resolve()
 			return
 		end
-
 
 		local out, code = util.exec {'ln', '-s', src, dest}
 		if code ~= 0 then promise:reject(out) else promise:resolve() end
