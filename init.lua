@@ -159,7 +159,7 @@ function M.install()
 			local dbPlugin = db.getPlugin(p.plugin) or {}
 			local fullyInstalled = dbPlugin.fullyInstalled
 
-			if (pluginExists(name) and (p.run and fullyInstalled)) or (not p.run and pluginExists(name))then
+			if pluginExists(name) and fullyInstalled then
 				core.log(string.format('[Miq] %s is already installed', name))
 				return
 			end
