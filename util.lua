@@ -73,4 +73,24 @@ function M.join(parts)
 	return str
 end
 
+function M.contains(tbl, match)
+	for _, v in ipairs(tbl) do
+		if v == match then return true end
+	end
+
+	return false
+end
+
+function M.ext(path)
+	return path:match '^.+%.(.+)$'
+end
+
+function M.cleanPath(path)
+	return path:gsub(string.format('%s$', '%' .. PATHSEP), '')
+end
+
+function M.dir(path)
+	return M.cleanPath(path):match('(.*[/\\])')
+end
+
 return M
